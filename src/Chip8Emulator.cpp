@@ -70,7 +70,8 @@ void Chip8Emulator::emulate()
       std::cout << std::hex << theProgramCounter << '\t' << instruction << '\t';
       if (instruction == 0x00E0) // Clear the Screen
       {
-         unsupported = true; /// @todo implement
+         /// @todo implement
+         std::cout << "cls" << std::endl;
       }
       else if (instruction == 0x00EE) // Return from subroutine
       {
@@ -106,11 +107,19 @@ void Chip8Emulator::emulate()
       {
          uint8_t x = (instruction & 0x0F00) >> 8;
          uint8_t nn = instruction & 0x00FF;
+
+         std::cout << "mov\tV" << static_cast<uint16_t>(x) << ", " << static_cast<uint16_t>(nn) << std::endl;
+
          if (x < NUM_V_REGISTERS)
          {
             theRegistersV[x] = nn;
          }
-         std::cout << "mov\tV" << static_cast<uint16_t>(x) << ", " << static_cast<uint16_t>(nn) << std::endl;
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF000) == 0x7000) // 7XNN  Add NN to VX
       {
@@ -120,11 +129,19 @@ void Chip8Emulator::emulate()
       {
          uint8_t x = (instruction & 0x0F00) >> 8;
          uint8_t y = (instruction & 0x00F0) >> 4;
+
+         std::cout << "mov\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+
          if ((x < NUM_V_REGISTERS) && (y < NUM_V_REGISTERS))
          {
             theRegistersV[x] = theRegistersV[y];
          }
-         std::cout << "mov\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x or y is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x8001) // 8XY1  Set VX to VX or VY
       {
@@ -218,11 +235,51 @@ void Chip8Emulator::emulate()
       }
       else if ((instruction & 0xF0FF) == 0xF055) // FX55  Store V0 to VX in memory starting at address I
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         std::cout << "movm\t(I), V0-V" << static_cast<uint16_t>(x) << std::endl;
+         if ((theMemoryAddressRegisterI + (2 * x)) >= MEMORY_SIZE) /// @todo check if writing to "emulator space" < 0x200 or over top of stack or display buffer
+         {
+            std::cout << "Previous instruction was invalid because address is out of memory bounds: "
+                      << std::hex << x << ". Exiting program!" << std::endl;
+            break;
+         }
+         else if (x >= NUM_V_REGISTERS) // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
+         else
+         {
+            for (unsigned int i = 0; i <= x; i++)
+            {
+               theMemory[theMemoryAddressRegisterI + i] = theRegistersV[i];
+            }
+         }
       }
       else if ((instruction & 0xF0FF) == 0xF065) // FX65  Fill V0 to VX with values from memory starting at address I
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         std::cout << "movm\tV0-V" << static_cast<uint16_t>(x) << ", (I)" << std::endl;
+         if ((theMemoryAddressRegisterI + (2 * x)) >= MEMORY_SIZE) /// @todo check reading from initialized memory
+         {
+            std::cout << "Previous instruction was invalid because address is out of memory bounds: "
+                      << std::hex << x << ". Exiting program!" << std::endl;
+            break;
+         }
+         else if (x >= NUM_V_REGISTERS) // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
+         else
+         {
+            for (unsigned int i = 0; i <= x; i++)
+            {
+               theRegistersV[i] = theMemory[theMemoryAddressRegisterI + i];
+            }
+         }
       }
       else
       {
