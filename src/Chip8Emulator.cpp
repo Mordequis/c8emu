@@ -70,12 +70,14 @@ void Chip8Emulator::emulate()
       std::cout << std::hex << theProgramCounter << '\t' << instruction << '\t';
       if (instruction == 0x00E0) // Clear the Screen
       {
-         /// @todo implement
+         /// @todo implement screen clear
          std::cout << "cls" << std::endl;
       }
       else if (instruction == 0x00EE) // Return from subroutine
       {
-         unsupported = true; /// @todo implement
+         theProgramCounter = theMemory[--theStackPointer]; /// @todo check if theStackPointer is within bounds of theMemory and the depth supported by the stack (16)
+         theProgramCounter |= theMemory[--theStackPointer] << 8;
+         std::cout << "ret" << std::endl;
       }
       else if ((instruction & 0xF000) == 0x0000) // 0NNN  RCA 1802 program
       {
@@ -89,19 +91,74 @@ void Chip8Emulator::emulate()
       }
       else if ((instruction & 0xF000) == 0x2000) // 2NNN  Call subroutine at NNN
       {
-         unsupported = true; /// @todo implement
+         theMemory[theStackPointer++] = theProgramCounter >> 8; /// @todo check if theStackPointer is within bounds of theMemory and the depth supported by the stack (16)
+         theMemory[theStackPointer++] = theProgramCounter;
+         theProgramCounter = instruction & 0x0FFF;
+         std::cout << "call\t" << theProgramCounter << std::endl;
+         continue;
       }
       else if ((instruction & 0xF000) == 0x3000) // 3XNN  Skip the next instruction if VX equals NN
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t nn = instruction & 0x00FF;
+
+         std::cout << "se\tV" << static_cast<uint16_t>(x) << ", " << static_cast<uint16_t>(nn) << std::endl;
+
+         if (x < NUM_V_REGISTERS)
+         {
+            if (theRegistersV[x] == nn)
+            {
+               theProgramCounter += 2;
+            }
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF000) == 0x4000) // 4XNN  Skip the next instruction if VX doesn't equal NN
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t nn = instruction & 0x00FF;
+
+         std::cout << "sne\tV" << static_cast<uint16_t>(x) << ", " << static_cast<uint16_t>(nn) << std::endl;
+
+         if (x < NUM_V_REGISTERS)
+         {
+            if (theRegistersV[x] != nn)
+            {
+               theProgramCounter += 2;
+            }
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x5000) // 5XY0  Skip the next instruction if VX equals VY
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t y = (instruction & 0x00F0) >> 4;
+
+         std::cout << "se\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+
+         if ((x < NUM_V_REGISTERS) && (y < NUM_V_REGISTERS))
+         {
+            if (theRegistersV[x] == theRegistersV[y])
+            {
+               theProgramCounter += 2;
+            }
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF000) == 0x6000) // 6XNN  Set VX to NN
       {
@@ -123,7 +180,21 @@ void Chip8Emulator::emulate()
       }
       else if ((instruction & 0xF000) == 0x7000) // 7XNN  Add NN to VX
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t nn = instruction & 0x00FF;
+
+         std::cout << "add\tV" << static_cast<uint16_t>(x) << ", " << static_cast<uint16_t>(nn) << std::endl;
+
+         if (x < NUM_V_REGISTERS)
+         {
+            theRegistersV[x] += nn;
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x8000) // 8XY0  Set VX to the value of VY
       {
@@ -145,15 +216,57 @@ void Chip8Emulator::emulate()
       }
       else if ((instruction & 0xF00F) == 0x8001) // 8XY1  Set VX to VX or VY
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t y = (instruction & 0x00F0) >> 4;
+
+         std::cout << "xor\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+
+         if ((x < NUM_V_REGISTERS) && (y < NUM_V_REGISTERS))
+         {
+            theRegistersV[x] = theRegistersV[x] | theRegistersV[y];
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x8002) // 8XY2  Set VX to VX and VY
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t y = (instruction & 0x00F0) >> 4;
+
+         std::cout << "xor\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+
+         if ((x < NUM_V_REGISTERS) && (y < NUM_V_REGISTERS))
+         {
+            theRegistersV[x] = theRegistersV[x] & theRegistersV[y];
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x8003) // 8XY3  Set VX to VX xor VY
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t y = (instruction & 0x00F0) >> 4;
+
+         std::cout << "xor\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+
+         if ((x < NUM_V_REGISTERS) && (y < NUM_V_REGISTERS))
+         {
+            theRegistersV[x] = theRegistersV[x] ^ theRegistersV[y];
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x8004) // 8XY4  Add VY to VX. Set VF to 1 when there's a carry, and to 0 when there isn't
       {
@@ -195,7 +308,12 @@ void Chip8Emulator::emulate()
       }
       else if ((instruction & 0xF000) == 0xD000) // DXYN  Sprites stored in memory at location in index register (I), 8bits wide. Wraps around the screen. If when drawn, clears a pixel, register VF is set to 1 otherwise it is zero. All drawing is XOR drawing (i.e. it toggles the screen pixels). Sprites are drawn starting at position VX, VY. N is the number of 8bit rows that need to be drawn. If N is greater than 1, second line continues at position VX, VY+1, and so on.
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t y = (instruction & 0x00F0) >> 4;
+         uint8_t n = instruction & 0x000F;
+
+         std::cout << "drw\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << ", " << static_cast<uint16_t>(n) << std::endl;
+         /// @todo implement
       }
       else if ((instruction & 0xF0FF) == 0xE09E) // EX9E  Skip the next instruction if the key stored in VX is pressed
       {
@@ -207,31 +325,116 @@ void Chip8Emulator::emulate()
       }
       else if ((instruction & 0xF0FF) == 0xF007) // FX07  Set VX to the value of the delay timer
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+
+         std::cout << "mov\tV" << static_cast<uint16_t>(x) << ", DT" << std::endl;
+
+         if (x < NUM_V_REGISTERS)
+         {
+            theRegistersV[x] = 0; /// @todo implement reading value from delay timer
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF0FF) == 0xF00A) // FX0A  A key press is awaited, and then stored in VX
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+
+         std::cout << "mov\tV" << static_cast<uint16_t>(x) << ", K" << std::endl;
+
+         if (x >= NUM_V_REGISTERS) // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
+
+         char keyPressed = 0xFF;
+         uint8_t input = 0;
+         std::cin >> keyPressed; /// @todo possibly replace with something that doesn't require enter
+         if ((keyPressed >= 'a') && (keyPressed <= 'f'))
+         {
+            input = 10 + (keyPressed - 'a');
+         }
+         else if ((keyPressed >= 'A') && (keyPressed <= 'F'))
+         {
+            input = 10 + (keyPressed - 'F');
+         }
+         else if ((keyPressed >= '0') && (keyPressed <= '9'))
+         {
+            input = keyPressed - '0';
+         }
+         else
+         {
+            std::cout << "Invalid input " << std::hex << keyPressed << ". Exiting program!" << std::endl;
+            break;
+         }
+         theRegistersV[x] = input;
       }
       else if ((instruction & 0xF0FF) == 0xF015) // FX15  Set the delay timer to VX
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+
+         std::cout << "mov\tDT, V" << static_cast<uint16_t>(x) << std::endl;
+
+         if (x < NUM_V_REGISTERS)
+         {
+            /// @todo implement starting delay timer with theRegistersV[x] as the starting value
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF0FF) == 0xF018) // FX18  Set the sound timer to VX
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+
+         std::cout << "mov\tST, V" << static_cast<uint16_t>(x) << std::endl;
+
+         if (x < NUM_V_REGISTERS)
+         {
+            /// @todo implement starting sound timer with theRegistersV[x] as the starting value
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF0FF) == 0xF01E) // FX1E  Add VX to I
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         std::cout << "add\tI, V" << static_cast<uint16_t>(x) << std::endl;
+         if (x < NUM_V_REGISTERS)
+         {
+            theMemoryAddressRegisterI += theRegistersV[x];
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF0FF) == 0xF029) // FX29  Set I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) are represented by a 4x5 font
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         std::cout << "mov\tF, V" << static_cast<uint16_t>(x) << std::endl;
+         /// @todo implement
       }
       else if ((instruction & 0xF0FF) == 0xF033) // FX33  Store the Binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         std::cout << "mov\tB, V" << static_cast<uint16_t>(x) << std::endl;
+         /// @todo implement
       }
       else if ((instruction & 0xF0FF) == 0xF055) // FX55  Store V0 to VX in memory starting at address I
       {
