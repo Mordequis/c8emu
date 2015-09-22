@@ -270,23 +270,122 @@ void Chip8Emulator::emulate()
       }
       else if ((instruction & 0xF00F) == 0x8004) // 8XY4  Add VY to VX. Set VF to 1 when there's a carry, and to 0 when there isn't
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t y = (instruction & 0x00F0) >> 4;
+
+         std::cout << "add\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+
+         if ((x < NUM_V_REGISTERS) && (y < NUM_V_REGISTERS))
+         {
+            uint16_t sum = theRegistersV[x] + theRegistersV[y];
+            if (sum > 0xFF)
+            {
+               theRegistersV[0x0F] = 1;
+            }
+            else
+            {
+               theRegistersV[0x0F] = 0;
+            }
+            theRegistersV[x] = sum;
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x8005) // 8XY5  Subtract VY from VX. Set VF to 0 when there's a borrow, and 1 when there isn't
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t y = (instruction & 0x00F0) >> 4;
+
+         std::cout << "sub\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+
+         if ((x < NUM_V_REGISTERS) && (y < NUM_V_REGISTERS))
+         {
+            if (theRegistersV[x] >= theRegistersV[y])
+            {
+               theRegistersV[0x0F] = 1;
+               theRegistersV[x] = theRegistersV[x] - theRegistersV[y];
+            }
+            else
+            {
+               theRegistersV[0x0F] = 0;
+               theRegistersV[x] = (0x0100 + theRegistersV[x]) - theRegistersV[y];
+            }
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x8006) // 8XY6  Shift VX right by one. Set VF to the value of the least significant bit of VX before the shift
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t y = (instruction & 0x00F0) >> 4;
+
+         std::cout << "shr\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+
+         if ((x < NUM_V_REGISTERS) && (y < NUM_V_REGISTERS))
+         {
+            theRegistersV[0x0F] = theRegistersV[x] & 0x01;
+            theRegistersV[x] = theRegistersV[x] >> 1;
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x8007) // 8XY7  Set VX to VY minus VX. Set VF to 0 when there's a borrow, and 1 when there isn't
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t y = (instruction & 0x00F0) >> 4;
+
+         std::cout << "subn\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+
+         if ((x < NUM_V_REGISTERS) && (y < NUM_V_REGISTERS))
+         {
+            if (theRegistersV[y] >= theRegistersV[x])
+            {
+               theRegistersV[0x0F] = 1;
+               theRegistersV[x] = theRegistersV[y] - theRegistersV[x];
+            }
+            else
+            {
+               theRegistersV[0x0F] = 0;
+               theRegistersV[x] = (0x0100 + theRegistersV[y]) - theRegistersV[x];
+            }
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x800E) // 8XYE  Shift VX left by one. Set VF to the value of the most significant bit of VX before the shift
       {
-         unsupported = true; /// @todo implement
+         uint8_t x = (instruction & 0x0F00) >> 8;
+         uint8_t y = (instruction & 0x00F0) >> 4;
+
+         std::cout << "shl\tV" << static_cast<uint16_t>(x) << ", V" << static_cast<uint16_t>(y) << std::endl;
+
+         if ((x < NUM_V_REGISTERS) && (y < NUM_V_REGISTERS))
+         {
+            theRegistersV[0x0F] = (theRegistersV[x] & 0x80) >> 7;
+            theRegistersV[x] = theRegistersV[x] << 1;
+         }
+         else // This should never happen
+         {
+            std::cout << "Previous instruction was invalid because x is more than "
+                      << std::hex << NUM_V_REGISTERS << ". Exiting program!" << std::endl;
+            break;
+         }
       }
       else if ((instruction & 0xF00F) == 0x9000) // 9XY0  Skip the next instruction if VX doesn't equal VY
       {
